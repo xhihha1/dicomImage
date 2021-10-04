@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+  <div id="dropZone"></div>
+</body>
+<script src="../dicomParser.min.js"></script>
+<script>
+  function dumpDataSet(instance) {
+    var json = JSON.stringify(instance, undefined, 2);
+    return '<pre><code id="code" class="prettyprint">' + json + '</code></pre>';
+  }
+
+  function logToPage (instance) {
+    document.getElementById('dropZone').innerHTML += dumpDataSet(instance);
+  }
+
+  function loadDICOM(fileName) {
+    return new Promise((resolve, reject) => {
+      var oReq = new XMLHttpRequest();
+      oReq.open("GET", fileName, true);
+      oReq.responseType = "arraybuffer";
+
+      oReq.onload = function (oEvent) {
+        var arrayBuffer = oReq.response; // Note: not oReq.responseText
+        // console.log('result 1', arrayBuffer)
+        if (arrayBuffer) {
+          // var byteArray = new Uint8Array(arrayBuffer);
+          // for (var i = 0; i < byteArray.byteLength; i++) {
+          // // do something with each byte in the array
+          // }
+          var byteArray = new Uint8Array(arrayBuffer);
+          var byteArray16 = new Uint16Array(arrayBuffer);
+          var kb = byteArray.length / 1024;
+          var mb = kb / 1024;
+          var byteStr = mb > 1 ? mb.toFixed(3) + " MB" : kb.toFixed(0) + " KB";
+          console.log('----------------------------------')
+          console.log(byteArray)
+          console.log(byteArray16)
+          console.log('----------------------------------')
+          // ----------------------------
+          {
+            var start = new Date().getTime();
+            dataSet = dicomParser.parseDicom(byteArray);
+
+            var options = {
+              omitPrivateAttibutes: false,
+              maxElementLength: 128
+            };
+            // console.log('toJS', dataSet)
+            var instance = dicomParser.explicitDataSetToJS(dataSet, options);
+            // console.log('instance', instance)
+            resolve(instance)
+            // Here we call dumpDataSet to recursively iterate through the DataSet and create an array
+            // of strings of the contents.
+
+            // var output = dumpDataSet(instance);
+
+            // // Combine the array of strings into one string and add it to the DOM
+            // document.getElementById('dropZone').innerHTML = output;
+          }
+          // ----------------------------
+        }
+      };
+      oReq.send(null);
+    })
+  }
+
+  function arrayStrToNumber(ary) {
+    ary.forEach(function (value, i) {
+      ary[i] = parseFloat(value)
+    })
+    return ary
+  }
+
+  // #1 從dicom tag中取出相對應的屬性 
+  function FrameGeometry(instance) {
+
+    return {
+      FrameOfReferenceUID: instance['x00200052'],
+      ImagePositionPatient: instance['x00200032'] ? arrayStrToNumber(instance['x00200032'].split('\\')) : undefined,  // 圖左上角座標
+      ImageOrientationPatient: instance['x00200037'] ? arrayStrToNumber(instance['x00200037'].split('\\')) : undefined, // 圖 X,Y 方向向量
+      PixelSpacing: instance['x00280030'] ? arrayStrToNumber(instance['x00280030'].split('\\')) : undefined, // 圖 X,Y 方向縮放倍率 (s1,s2)	
+      Columns: instance['x00280011'], // 圖 Y 長度
+      Rows: instance['x00280010'] // 圖 X 長度
+    }
+  }
+
+  // #2 比對兩個 dicom 之間是否有關連
+  function checkReferenceID(source, destination) {
+    if (source.FrameOfReferenceUID !== destination.FrameOfReferenceUID) {
+      return false
+    }
+    if (!source.ImageOrientationPatient || !destination.ImageOrientationPatient) {
+      return false
+    }
+    if (JSON.stringify(source.ImageOrientationPatient) === JSON.stringify(destination.ImageOrientationPatient)) {
+      return false
+    }
+    return true
+  }
+
+  // #3 計算平面法向量
+  function normalVector(plane) {
+    var vector = new Array(3)
+    var v = plane.ImageOrientationPatient
+    vector[0] = v[1] * v[5] - v[2] * v[4]
+    vector[1] = v[2] * v[3] - v[0] * v[5]
+    vector[2] = v[0] * v[4] - v[1] * v[3]
+    return vector
+  }
+
+  // #4 計算有界平面四個頂點座標
+  function vertices(plane) {
+    var v0 = new Array(3),
+      v1 = new Array(3),
+      v2 = new Array(3),
+      v3 = new Array(3),
+      vr = new Array(3),
+      vc = new Array(3)
+    v0 = plane.ImagePositionPatient
+    vr = [
+      plane.ImageOrientationPatient[0],
+      plane.ImageOrientationPatient[1],
+      plane.ImageOrientationPatient[2]
+    ]
+    vc = [
+      plane.ImageOrientationPatient[3],
+      plane.ImageOrientationPatient[4],
+      plane.ImageOrientationPatient[5]
+    ]
+    // v1 
+    v0.forEach(function (value, index) {
+      v1[index] = value + vr[index] * (plane.PixelSpacing[0] * plane.Rows)
+    })
+    // v2 
+    v1.forEach(function (value, index) {
+      v2[index] = value + vc[index] * (plane.PixelSpacing[1] * plane.Columns)
+    })
+    // v3 
+    v0.forEach(function (value, index) {
+      v3[index] = value + vc[index] * (plane.PixelSpacing[1] * plane.Columns)
+    })
+    return {
+      topLeft: v0,
+      topRight: v1,
+      bottomRight: v2,
+      bottomLeft: v3
+    }
+  }
+
+  // #5 計算兩個向量內積
+  function dotProduct(vector1, vector2) {
+    var np
+    np = vector1[0] * vector2[0]
+    np += vector1[1] * vector2[1]
+    np += vector1[2] * vector2[2]
+    return np
+  }
+
+  // #6 計算來源plane1與目標plane2，相交在plane2邊界上的兩個點
+  function intersectionLocalizer(plane1, plane2) {
+    var nA, nB, nC, nD, nP, t;
+    var points = [],
+      v0 = new Array(3),
+      v1 = new Array(3);
+    nP = dotProduct(plane1.NormalVector, plane1.Vertices.topLeft)
+    nA = dotProduct(plane1.NormalVector, plane2.Vertices.topLeft)
+    nB = dotProduct(plane1.NormalVector, plane2.Vertices.topRight)
+    nC = dotProduct(plane1.NormalVector, plane2.Vertices.bottomRight)
+    nD = dotProduct(plane1.NormalVector, plane2.Vertices.bottomLeft)
+    // line01
+    if (Math.abs(nB - nA) > 0) {
+      t = (nP - nA) / (nB - nA);
+      v0 = plane2.Vertices.topLeft
+      v1 = plane2.Vertices.topRight
+      console.log('A',t,v0,v1)
+      if (t > 0 && t <= 1) {
+        var point = new Array(3)
+        point[0] = v0[0] + t * (v1[0] - v0[0])
+        point[1] = v0[1] + t * (v1[1] - v0[1])
+        point[2] = v0[2] + t * (v1[2] - v0[2])
+        points.push(point)
+        point = null
+        delete point
+      }
+    }
+    // line12
+    if (Math.abs(nC - nB) > 0) {
+      console.log('B')
+      t = (nP - nB) / (nC - nB);
+      v0 = plane2.Vertices.topRight
+      v1 = plane2.Vertices.bottomRight
+      if (t > 0 && t <= 1) {
+        var point = new Array(3)
+        point[0] = v0[0] + t * (v1[0] - v0[0])
+        point[1] = v0[1] + t * (v1[1] - v0[1])
+        point[2] = v0[2] + t * (v1[2] - v0[2])
+        points.push(point)
+        point = null
+        delete point
+      }
+    }
+    // line23
+    if (Math.abs(nD - nC) > 0) {
+      t = (nP - nC) / (nD - nC);
+      v0 = plane2.Vertices.bottomRight
+      v1 = plane2.Vertices.bottomLeft
+      console.log('C',t,v0,v1)
+      if (t > 0 && t <= 1) {
+        var point = new Array(3)
+        point[0] = v0[0] + t * (v1[0] - v0[0])
+        point[1] = v0[1] + t * (v1[1] - v0[1])
+        point[2] = v0[2] + t * (v1[2] - v0[2])
+        points.push(point)
+        point = null
+        delete point
+      }
+    }
+    // line30
+    if (Math.abs(nA - nD) > 0) {
+      console.log('D')
+      t = (nP - nD) / (nA - nD);
+      v0 = plane2.Vertices.bottomLeft
+      v1 = plane2.Vertices.topLeft
+      if (t > 0 && t <= 1) {
+        var point = new Array(3)
+        point[0] = v0[0] + t * (v1[0] - v0[0])
+        point[1] = v0[1] + t * (v1[1] - v0[1])
+        point[2] = v0[2] + t * (v1[2] - v0[2])
+        points.push(point)
+        point = null
+        delete point
+      }
+    }
+    return points
+  }
+
+  // #7 計算plane旋轉到XY平面的角度，併計算point旋轉到 XY平面的對應點
+  function rotateToXY (plane, point) {
+    var vr = [
+      plane.ImageOrientationPatient[0],
+      plane.ImageOrientationPatient[1],
+      plane.ImageOrientationPatient[2]
+    ]
+    // 投影XY 與 X 角度 (z軸旋轉)
+    var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1])
+    var theta1 = Math.acos(vr[0]/l1)
+    // 投影XZ 與 X 角度 (y軸旋轉)
+    var l2 = Math.sqrt(vr[0] * vr[0] + vr[2] * vr[2])
+    var theta2 = Math.acos(vr[0]/l2)
+
+    
+    // ---------------------------------------
+
+    // // y 轉
+    // var x1 = (plane.Vertices.topRight[0] - plane.Vertices.topLeft[0]) * Math.cos(theta1) + (plane.Vertices.topRight[2] - plane.Vertices.topLeft[2]) * Math.sin(theta1)
+    // var y1 = (plane.Vertices.topRight[1] - plane.Vertices.topLeft[1])
+    // var z1 = (plane.Vertices.topRight[2] - plane.Vertices.topLeft[2]) * Math.cos(theta1) - (plane.Vertices.topRight[0] - plane.Vertices.topLeft[0]) * Math.sin(theta1)
+    // // z 轉
+    // var x2 = x1 * Math.cos(theta2) - y1 * Math.sin(theta2)
+    // var y2 = x1 * Math.sin(theta2) + y1 * Math.cos(theta2)
+    // var z2 = z1
+    // console.log('O',vr[0],vr[1],vr[2])
+    // console.log('P',x1,y1,z1)
+    // console.log('Q',x2,y2,z2)
+    // console.log('Q/*',x2/plane.PixelSpacing[0],y2/plane.PixelSpacing[1],z2)
+    // console.log('row', plane.Rows)
+    // console.log('rowScale', plane.PixelSpacing[0], plane.PixelSpacing[1])
+    // console.log('xxx', plane.Rows * plane.PixelSpacing[0])
+    // console.log('------------------------------------------')
+
+    // // // --------------------------------------
+
+    // // y 轉
+    // var x1 = (plane.Vertices.bottomLeft[0] - plane.Vertices.topLeft[0]) * Math.cos(theta1) + (plane.Vertices.bottomLeft[2] - plane.Vertices.topLeft[2]) * Math.sin(theta1)
+    // var y1 = (plane.Vertices.bottomLeft[1] - plane.Vertices.topLeft[1])
+    // var z1 = (plane.Vertices.bottomLeft[2] - plane.Vertices.topLeft[2]) * Math.cos(theta1) - (plane.Vertices.bottomLeft[0] - plane.Vertices.topLeft[0]) * Math.sin(theta1)
+    // // z 轉
+    // var x2 = x1 * Math.cos(theta2) - y1 * Math.sin(theta2)
+    // var y2 = x1 * Math.sin(theta2) + y1 * Math.cos(theta2)
+    // var z2 = z1
+    // console.log('O',vr[0],vr[1],vr[2])
+    // console.log('P',x1,y1,z1)
+    // console.log('Q',x2,y2,z2)
+    // console.log('Q/*',x2/plane.PixelSpacing[0],y2/plane.PixelSpacing[1],z2)
+    // console.log('row', plane.Rows)
+    // console.log('rowScale', plane.PixelSpacing[0], plane.PixelSpacing[1])
+    // console.log('xxx', plane.Rows * plane.PixelSpacing[0])
+    // console.log('------------------------------------------')
+
+    // --------------------------------------
+
+    // y 轉
+    var x1 = (point[0] - plane.Vertices.topLeft[0]) * Math.cos(theta1) + (point[2] - plane.Vertices.topLeft[2]) * Math.sin(theta1)
+    var y1 = (point[1] - plane.Vertices.topLeft[1])
+    var z1 = (point[2] - plane.Vertices.topLeft[2]) * Math.cos(theta1) - (point[0] - plane.Vertices.topLeft[0]) * Math.sin(theta1)
+    // z 轉
+    var x2 = x1 * Math.cos(theta2) - y1 * Math.sin(theta2)
+    var y2 = x1 * Math.sin(theta2) + y1 * Math.cos(theta2)
+    var z2 = z1
+    // console.log('O',vr[0],vr[1],vr[2])
+    // console.log('P',x1,y1,z1)
+    // console.log('Q',x2,y2,z2)
+    // console.log('Q/*',x2/plane.PixelSpacing[0],y2/plane.PixelSpacing[1],z2)
+    // console.log('row', plane.Rows)
+    // console.log('rowScale', plane.PixelSpacing[0], plane.PixelSpacing[1])
+    // console.log('xxx', plane.Rows * plane.PixelSpacing[0])
+    // return [x2, y2, z2]
+    return [x2/plane.PixelSpacing[0], y2/plane.PixelSpacing[1], z2]
+  }
+
+  
+
+  // #0 程式執行起點
+  var plane1, plane2;
+  loadDICOM('series01/IMG00001.dcm').then((instance) => {
+    console.log('RRRRR--------', instance)
+    console.log('RRRRR--------', instance['x7fe00010'])
+    plane1 = FrameGeometry(instance)
+    return loadDICOM('series02/IMG00001.dcm')
+  }).then((instance) => {
+    plane2 = FrameGeometry(instance)
+    // console.log(plane1)
+    // console.log(plane2)
+    if (checkReferenceID(plane1, plane2)) {
+      plane1.NormalVector = normalVector(plane1)
+      plane2.NormalVector = normalVector(plane2)
+      plane1.Vertices = vertices(plane1)
+      plane2.Vertices = vertices(plane2)
+      // console.log(plane1.Vertices, plane2.Vertices)
+      var points = intersectionLocalizer(plane1, plane2)
+      // console.log(points)
+      // console.log('start', rotateToXY(plane2, points[0]))
+      // console.log('end', rotateToXY(plane2, points[1]))
+      
+      logToPage(rotateToXY(plane2, points[0])) // start point
+      logToPage(rotateToXY(plane2, points[1])) // end point
+    }
+  })
+</script>
+
+</html>
