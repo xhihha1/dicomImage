@@ -178,6 +178,12 @@ body {
   opacity: 1;
 }
 
+
+.prop-iconBtn.btnActive {
+  /* background-color: rgb(64,224,208); */
+  background-color: rgb(220,20,60);
+}
+
 .prop-slider {
   margin: 0px;
   -webkit-appearance: none;
@@ -200,6 +206,9 @@ body {
   width: 25px;
   height: 25px;
   background: rgb(70,130,180);
+  background-size: contain;
+  background-position: center;
+  background-image: url('../icon/leftRight_w.png');
   cursor: pointer;
 }
 
@@ -207,6 +216,9 @@ body {
   width: 25px;
   height: 25px;
   background: rgb(70,130,180);
+  background-size: contain;
+  background-position: center;
+  background-image: url('../icon/leftRight_w.png');
   cursor: pointer;
 }
 
