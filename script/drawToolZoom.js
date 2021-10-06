@@ -27,14 +27,21 @@
   });
 
   function init(){
-    window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
-    // window.editorList.push(initCanvas('canvasParent1', 'mainEditor1'))
-    // window.editorList.push(initCanvas('canvasParent2', 'mainEditor2'))
+    
+    // layout1
+    // var edit = window.activeEdit
+    // window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
+    // if (!edit) {  edit = editorList[0]; window.activeEdit = edit; }
+    // if (edit) { loadInfo(edit, window.imagePath) }
+
+    // init all
     var edit = window.activeEdit
-    if (!edit) {  edit = editorList[0]; window.activeEdit = edit; }
-    if (edit) { loadInfo(edit, window.imagePath) }
-    // edit = editorList[1]; window.activeEdit = edit;
-    // loadInfo(edit, window.imagePath)
+    for (var i = 0; i < 4; i++) {
+      if (!i) { window.editorList.push(initCanvas('canvasParent', 'mainEditor')) }
+      else { window.editorList.push(initCanvas('canvasParent' + i, 'mainEditor' + i)) }
+      loadInfo(editorList[i], window.imagePath)
+    }
+    if (!edit) {  edit = editorList[0]; window.activeEdit = edit; $('#canvasParent').addClass('activeView') }
   }
 
   function initCanvas(canvasId, canvasViewId) {
@@ -99,6 +106,10 @@
       if (!dicomFileList[fileName]) { dicomFileList[fileName] = {} }
       dicomFileList[fileName]['dataSet'] = dataSet
       edit.dicomFileName = fileName
+      edit.dicomInfo = {
+        ww: op.ww,
+        wl: op.wl
+      }
       edit.canvasView.setBackgroundImage(op.src, function () {
         edit.canvasView.renderAll();
       }, {

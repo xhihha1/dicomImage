@@ -1,0 +1,131 @@
+#lContain .activeView {
+  border: 1px solid rgb(70,130,180) !important;
+}
+
+#canvasParent1 { display: none; overflow: hidden; }
+#canvasParent2 { display: none; overflow: hidden; }
+#canvasParent3 { display: none; overflow: hidden; }
+
+/* ------------ layout 1 ---------------- */
+
+#lContain.layout1 #canvasParent {
+  position: relative;
+  margin: 0 auto;
+  margin-top: 5px;
+  width: calc(100% - 10px);
+  height: calc(100% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+#lContain.layout1 #canvasParent1 { display: none; }
+#lContain.layout1 #canvasParent2 { display: none; }
+#lContain.layout1 #canvasParent3 { display: none; }
+
+/* ------------ layout 2 ---------------- */
+
+#lContain.layout2 #canvasParent {
+  float: left;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 10px);
+  height: calc(100% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout2 #canvasParent1 {
+  display: block;
+  float: left;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 5px);
+  height: calc(100% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout2 #canvasParent2 { display: none; }
+#lContain.layout2 #canvasParent3 { display: none; }
+
+/* ------------ layout 3 ---------------- */
+
+#lContain.layout3 #canvasParent {
+  float: left;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 10px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout3 #canvasParent1 {
+  float: left;
+  display: block;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 5px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout3 #canvasParent2 {
+  float: left;
+  display: block;
+  margin: 0px 0px 5px 5px;
+  width: calc(100% - 10px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+#lContain.layout3 #canvasParent3 { display: none; }
+
+/* ------------ layout 4 ---------------- */
+
+
+#lContain.layout4 #canvasParent {
+  float: left;
+  display: block;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 10px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout4 #canvasParent1 {
+  float: left;
+  display: block;
+  margin: 5px 0px 5px 5px;
+  width: calc(50% - 5px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout4 #canvasParent2 {
+  float: left;
+  display: block;
+  margin: 0px 0px 5px 5px;
+  width: calc(50% - 10px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+#lContain.layout4 #canvasParent3 {
+  float: left;
+  display: block;
+  margin: 0px 0px 5px 5px;
+  width: calc(50% - 5px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}

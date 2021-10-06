@@ -14,6 +14,7 @@
   <link rel="apple-touch-icon-precomposed" sizes="114x114" href="icon/Key_logo.png" />
   <link rel="SHORTCUT ICON" href="icon/Key_logo.png">
   <link rel="stylesheet" type="text/css" href="style/style.css" />
+  <link rel="stylesheet" type="text/css" href="style/layout.css" />
   <script type="text/javascript" src="script/thirdparty/fabric.min.js"></script>
   <script type="text/javascript" src="script/thirdparty/jquery-3.5.1.min.js"></script>
   <script type="text/javascript" src="script/thirdparty/dicomParser.min.js"></script>
@@ -31,6 +32,10 @@
           <li><input type="text" id="imagePath" value="IMG00001.dcm" /></li>
           <li id="btnRect"><img src="./icon/rectangle_w.png" class="tool-icon"></li>
           <li id="btnEllipse"><img src="./icon/ellipse_w.png" class="tool-icon"></li>
+          <li id="btnlayout1"><img src="./icon/layout1_w.png" class="tool-icon"></li>
+          <li id="btnlayout2"><img src="./icon/layout2_w.png" class="tool-icon"></li>
+          <li id="btnlayout3"><img src="./icon/layout3_w.png" class="tool-icon"></li>
+          <li id="btnlayout4"><img src="./icon/layout4_w.png" class="tool-icon"></li>
         </ul>
       </div>
     </div>
@@ -39,12 +44,16 @@
         <div id="canvasParent">
           <canvas id="mainEditor"></canvas>
         </div>
-        <!-- <div id="canvasParent1">
+        <div id="canvasParent1">
           <canvas id="mainEditor1"></canvas>
         </div>
         <div id="canvasParent2">
           <canvas id="mainEditor2"></canvas>
-        </div> -->
+        </div>
+        <div id="canvasParent3">
+          <canvas id="mainEditor3"></canvas>
+        </div>
+        <div class="clearBoth"></div>
       </div>
       <div id="rContain">
         <div id="hideDiv"><div id="tempDiv"></div></div>
@@ -93,6 +102,7 @@
 <script type="text/javascript" src="script/fabricExtend/hiDraw_Import.js"></script>
 <script type="text/javascript" src="script/drawToolZoom.js"></script>
 <script type="text/javascript" src="script/drawToolEvent.js"></script>
+<script type="text/javascript" src="script/drawToolLayout.js"></script>
 <script>
   (function () {
     // initCanvas('canvasParent', 'mainEditor')
