@@ -28,9 +28,13 @@
 
   function init(){
     window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
+    // window.editorList.push(initCanvas('canvasParent1', 'mainEditor1'))
+    // window.editorList.push(initCanvas('canvasParent2', 'mainEditor2'))
     var edit = window.activeEdit
     if (!edit) {  edit = editorList[0]; window.activeEdit = edit; }
     if (edit) { loadInfo(edit, window.imagePath) }
+    // edit = editorList[1]; window.activeEdit = edit;
+    // loadInfo(edit, window.imagePath)
   }
 
   function initCanvas(canvasId, canvasViewId) {

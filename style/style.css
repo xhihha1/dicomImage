@@ -225,9 +225,28 @@ body {
 #canvasParent {
   position: relative;
   margin: 0 auto;
-  top: 5px;
+  margin-top: 5px;
   width: calc(100% - 10px);
   height: calc(100% - 10px);
+  background-color: rgb(39,39,39);
+}
+
+
+#canvasParent1 {
+  position: relative;
+  margin: 0 auto;
+  margin-top: 5px;
+  width: calc(100% - 10px);
+  height: calc(50% - 10px);
+  background-color: rgb(39,39,39);
+}
+
+#canvasParent2 {
+  position: relative;
+  margin: 0 auto;
+  top: 5px;
+  width: calc(100% - 10px);
+  height: calc(50% - 10px);
   background-color: rgb(39,39,39);
 }
 
