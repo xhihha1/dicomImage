@@ -90,7 +90,8 @@
       var newWWval = parseFloat(startWW + deltaX / 5)
       var newWLval = parseFloat(startWC + deltaY / 5)
       var dataSet = dicomFileList[activeEdit.dicomFileName].dataSet
-      var op = changeDicomWL(dataSet, newWWval, newWLval)
+      // var op = changeDicomWL(dataSet, newWWval, newWLval)
+      var op = changeDicomWLD(dataSet, newWWval, newWLval)
       activeEdit.canvasView.setBackgroundImage(op.src, function () {
         activeEdit.canvasView.renderAll();
       }, {
@@ -148,7 +149,8 @@
     var wc = parseFloat(document.getElementById('newWL').value)
     document.getElementById('wwText').innerHTML = ww
     var dataSet = dicomFileList[activeEdit.dicomFileName].dataSet
-    var op = changeDicomWL(dataSet, ww, wc)
+    // var op = changeDicomWL(dataSet, ww, wc)
+    var op = changeDicomWLD(dataSet, ww, wc)
     activeEdit.canvasView.setBackgroundImage(op.src, function () {
       activeEdit.canvasView.renderAll();
     }, {
@@ -163,7 +165,8 @@
     var wc = parseFloat(document.getElementById('newWL').value)
     document.getElementById('wlText').innerHTML = wc
     var dataSet = dicomFileList[activeEdit.dicomFileName].dataSet
-    var op = changeDicomWL(dataSet, ww, wc)
+    // var op = changeDicomWL(dataSet, ww, wc)
+    var op = changeDicomWLD(dataSet, ww, wc)
     activeEdit.canvasView.setBackgroundImage(op.src, function () {
       activeEdit.canvasView.renderAll();
     }, {
