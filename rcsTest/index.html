@@ -314,11 +314,13 @@
 
   // #0 程式執行起點
   var plane1, plane2;
-  loadDICOM('series01/IMG00001.dcm').then((instance) => {
+  loadDICOM('555.dcm').then((instance) => {
+  // loadDICOM('series01/IMG00001.dcm').then((instance) => {
     console.log('RRRRR--------', instance)
     console.log('RRRRR--------', instance['x7fe00010'])
     plane1 = FrameGeometry(instance)
-    return loadDICOM('series02/IMG00001.dcm')
+    // return loadDICOM('series02/IMG00001.dcm')
+    return loadDICOM('572.dcm')
   }).then((instance) => {
     plane2 = FrameGeometry(instance)
     // console.log(plane1)
