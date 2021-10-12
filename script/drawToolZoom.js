@@ -1,7 +1,7 @@
 (function () {
 
-  // window.imagePath = 'IMG00001.dcm'
-  window.imagePath = '1-1.dcm'
+  window.imagePath = 'IMG00001.dcm'
+  // window.imagePath = '1-1.dcm'
   // window.imagePath = 'DAA0001VS019.dcm'
   window.editorList = []
   window.activeEdit = undefined

@@ -72,7 +72,7 @@
     }
   });
 
-  var mouseX, mouseY, newX, newY, startWW, startWC, startChangeWW = false;
+  var mouseX, mouseY, newX, newY, startWW, startWC, startChangeWW = false, timeoutIdx;
   function wlMouseDown (e) {
     mouseX = e.clientX
     mouseY = e.clientY
@@ -81,8 +81,11 @@
     startChangeWW = true
   }
   function wlMouseMove (e) {
+    // clearTimeout(timeoutIdx)
+    // timeoutIdx = setTimeout(function () {
     if (startChangeWW) {
       console.log('in')
+      console.log('start', startWW, startWC)
       newX = e.clientX
       newY = e.clientY
       var deltaX = mouseX - newX;
@@ -100,11 +103,15 @@
         left: 0,
         top: 0,
       });
+      console.log('new', newWWval, newWLval)
       document.getElementById('newWW').value = newWWval;
       document.getElementById('newWL').value = newWLval;
     }
+    // }, 10)
   }
-  function wlMouseUp (e) { startChangeWW = false }
+  function wlMouseUp (e) {
+    startChangeWW = false
+  }
   
   $('#btnExport').click(function () {
     // var fabricJson = activeEdit.canvasView.toJSON(['label', 'uniqueIndex', 'hiId', 'altitude', 'source']);
