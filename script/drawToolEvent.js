@@ -177,6 +177,106 @@
     });
   })
 
+    // ---------- drag And drop ------------
 
+    function dropFunc (activeEdit, event) {
+      event.originalEvent.dataTransfer.dropEffect = 'move';
+      event.originalEvent.dataTransfer.effectAllowed = 'move';
+      console.log('B', this.result, event.originalEvent.dataTransfer)
+      // fetch FileList object
+      var files = event.originalEvent.dataTransfer.files
+      if (event.target && event.target.files) {
+        files = event.target.files
+      } else if (event.dataTransfer && event.dataTransfer.files) {
+        files = event.dataTransfer.files
+      } else if (event.originalEvent.dataTransfer && event.originalEvent.dataTransfer.files) {
+        files = event.originalEvent.dataTransfer.files
+      }
+      if (!files) { return false; }
+      // process all File objects
+      for (var i = 0, f; f = files[i]; i++) {
+        var fileName = f.name
+        // console.log(f.name, 'type', f.type, 'size', f.size)
+        if (i === 0) {
+          var reader = new FileReader();
+          reader.onloadend = function() {
+              // var data = JSON.parse(this.result);
+              parseBufferArrayAndSetBackground(activeEdit, fileName, this.result)
+          };
+          reader.readAsArrayBuffer(f);
+          // FileReader.readAsArrayBuffer()
+          // FileReader.readAsBinaryString()
+          // FileReader.readAsDataURL()
+          // FileReader.readAsText()
+        }
+      }
+    }
 
+    $("#canvasParent").on("dragover", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  
+    $("#canvasParent").on("dragleave", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    $("#canvasParent").on("drop", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      $('#canvasParent').click()
+      dropFunc(activeEdit, event)
+    });
+
+    $("#canvasParent1").on("dragover", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  
+    $("#canvasParent1").on("dragleave", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    $("#canvasParent1").on("drop", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      $('#canvasParent1').click()
+      dropFunc(activeEdit, event)
+    });
+    
+    $("#canvasParent2").on("dragover", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  
+    $("#canvasParent2").on("dragleave", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    $("#canvasParent2").on("drop", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      $('#canvasParent2').click()
+      dropFunc(activeEdit, event)
+    });
+    
+    $("#canvasParent3").on("dragover", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+  
+    $("#canvasParent3").on("dragleave", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+
+    $("#canvasParent3").on("drop", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      $('#canvasParent3').click()
+      dropFunc(activeEdit, event)
+    });
 })()

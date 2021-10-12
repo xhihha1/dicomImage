@@ -31,24 +31,26 @@
   function init() {
 
     // layout1
-    var edit = window.activeEdit
-    window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
-    if (!edit) {
-      edit = editorList[0];
-      window.activeEdit = edit;
-    }
-    if (edit) {
-      loadInfoD(edit, window.imagePath)
-    }
+    // var edit = window.activeEdit
+    // window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
+    // if (!edit) {
+    //   edit = editorList[0];
+    //   window.activeEdit = edit;
+    // }
+    // if (edit) {
+    //   loadInfoD(edit, window.imagePath)
+    // }
 
     // init all
-    // var edit = window.activeEdit
-    // for (var i = 0; i < 4; i++) {
-    //   if (!i) { window.editorList.push(initCanvas('canvasParent', 'mainEditor')) }
-    //   else { window.editorList.push(initCanvas('canvasParent' + i, 'mainEditor' + i)) }
-    //   loadInfo(editorList[i], window.imagePath)
-    // }
-    // if (!edit) {  edit = editorList[0]; window.activeEdit = edit; $('#canvasParent').addClass('activeView') }
+    var edit = window.activeEdit
+    for (var i = 0; i < 4; i++) {
+      if (!i) {
+        window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
+        loadInfoD(editorList[i], window.imagePath)
+      } else { window.editorList.push(initCanvas('canvasParent' + i, 'mainEditor' + i)) }
+      // loadInfoD(editorList[i], window.imagePath)
+    }
+    if (!edit) {  edit = editorList[0]; window.activeEdit = edit; $('#canvasParent').addClass('activeView') }
   }
 
   function initCanvas(canvasId, canvasViewId) {
@@ -296,70 +298,109 @@
 
   function loadInfoD(edit, fileName) {
     loadDICOMD(fileName).then((arrayBuffer) => {
-      const data2 = new DataView(arrayBuffer);
-      const image = daikon.Series.parseImage(data2);
-      var windowWidth = image.getWindowWidth()
-      var windowCenter = image.getWindowCenter()
-      var op = changeDicomWLD(image, windowWidth, windowCenter)
-      if (!dicomFileList[fileName]) {
-        dicomFileList[fileName] = {}
-      }
-      dicomFileList[fileName]['dataSet'] = image
-      edit.dicomFileName = fileName
-      edit.dicomInfo = {
-        ww: op.ww,
-        wl: op.wl,
-        width: op.width,
-        height: op.height
-      }
-
-      // var obj = image.getInterpretedData(false, true);
-      // var width = obj.numCols;
-      // var height = obj.numRows;
-
-      // var array = new Uint8ClampedArray(obj.data);
-      // var canvas = document.createElement("canvas");
-      // canvas.width = width;
-      // canvas.height = height;
-      // var ctx = canvas.getContext("2d");
-      // var imgData = ctx.createImageData(width, height); // width x height
-      // var data = imgData.data;
-      // for (var i = 3, k = 0; i < data.byteLength; i = i + 4, k = k + 1) {
-      //   var result = (array[k] & 0xff);
-      //   // data[i] = 255 - result;
-      //   data[i - 3] = result;
-      //   data[i - 2] = result;
-      //   data[i - 1] = result;
-      //   data[i] = 255;
+      parseBufferArrayAndSetBackground(edit, fileName, arrayBuffer)
+      // const data2 = new DataView(arrayBuffer);
+      // const image = daikon.Series.parseImage(data2);
+      // var windowWidth = image.getWindowWidth()
+      // var windowCenter = image.getWindowCenter()
+      // var op = changeDicomWLD(image, windowWidth, windowCenter)
+      // if (!dicomFileList[fileName]) {
+      //   dicomFileList[fileName] = {}
       // }
-      // ctx.putImageData(imgData, 0, 0);
-      // var op = {
-      //   src: canvas.toDataURL(),
-      //   ww: windowWidth,
-      //   wl: windowCenter
+      // dicomFileList[fileName]['dataSet'] = image
+      // edit.dicomFileName = fileName
+      // edit.dicomInfo = {
+      //   ww: op.ww,
+      //   wl: op.wl,
+      //   width: op.width,
+      //   height: op.height
       // }
 
-      edit.canvasView.setBackgroundImage(op.src, function () {
-        edit.canvasView.renderAll();
-      }, {
-        originX: 'left',
-        originY: 'top',
-        left: 0,
-        top: 0,
-      });
-      document.dispatchEvent(new CustomEvent('wlChange', {
-        detail: {
-          ww: op.ww,
-          wl: op.wl
-        }
-      }));
+      // // var obj = image.getInterpretedData(false, true);
+      // // var width = obj.numCols;
+      // // var height = obj.numRows;
 
-      // 圖移置中
-      var rs = resizeCanvas(edit.canvasView.width, edit.canvasView.height, op.width, op.height)
-      edit.canvasView.setZoom(rs.zoom)
-      edit.canvasView.absolutePan(rs.pan)
+      // // var array = new Uint8ClampedArray(obj.data);
+      // // var canvas = document.createElement("canvas");
+      // // canvas.width = width;
+      // // canvas.height = height;
+      // // var ctx = canvas.getContext("2d");
+      // // var imgData = ctx.createImageData(width, height); // width x height
+      // // var data = imgData.data;
+      // // for (var i = 3, k = 0; i < data.byteLength; i = i + 4, k = k + 1) {
+      // //   var result = (array[k] & 0xff);
+      // //   // data[i] = 255 - result;
+      // //   data[i - 3] = result;
+      // //   data[i - 2] = result;
+      // //   data[i - 1] = result;
+      // //   data[i] = 255;
+      // // }
+      // // ctx.putImageData(imgData, 0, 0);
+      // // var op = {
+      // //   src: canvas.toDataURL(),
+      // //   ww: windowWidth,
+      // //   wl: windowCenter
+      // // }
+
+      // edit.canvasView.setBackgroundImage(op.src, function () {
+      //   edit.canvasView.renderAll();
+      // }, {
+      //   originX: 'left',
+      //   originY: 'top',
+      //   left: 0,
+      //   top: 0,
+      // });
+      // document.dispatchEvent(new CustomEvent('wlChange', {
+      //   detail: {
+      //     ww: op.ww,
+      //     wl: op.wl
+      //   }
+      // }));
+
+      // // 圖移置中
+      // var rs = resizeCanvas(edit.canvasView.width, edit.canvasView.height, op.width, op.height)
+      // edit.canvasView.setZoom(rs.zoom)
+      // edit.canvasView.absolutePan(rs.pan)
     })
   }
+
+  function parseBufferArrayAndSetBackground (edit, fileName, arrayBuffer) {
+    const data2 = new DataView(arrayBuffer);
+    const image = daikon.Series.parseImage(data2);
+    var windowWidth = image.getWindowWidth()
+    var windowCenter = image.getWindowCenter()
+    var op = changeDicomWLD(image, windowWidth, windowCenter)
+    if (!dicomFileList[fileName]) {
+      dicomFileList[fileName] = {}
+    }
+    dicomFileList[fileName]['dataSet'] = image
+    edit.dicomFileName = fileName
+    edit.dicomInfo = {
+      ww: op.ww,
+      wl: op.wl,
+      width: op.width,
+      height: op.height
+    }
+    edit.canvasView.setBackgroundImage(op.src, function () {
+      edit.canvasView.renderAll();
+    }, {
+      originX: 'left',
+      originY: 'top',
+      left: 0,
+      top: 0,
+    });
+    document.dispatchEvent(new CustomEvent('wlChange', {
+      detail: {
+        ww: op.ww,
+        wl: op.wl
+      }
+    }));
+    // 圖移置中
+    var rs = resizeCanvas(edit.canvasView.width, edit.canvasView.height, op.width, op.height)
+    edit.canvasView.setZoom(rs.zoom)
+    edit.canvasView.absolutePan(rs.pan)
+  }
+  window.parseBufferArrayAndSetBackground = parseBufferArrayAndSetBackground
 
   function changeDicomWLD(dataSet, windowWidth, windowCenter) {
     var image = dataSet
