@@ -167,30 +167,123 @@ function intersectionLocalizer(plane1, plane2) {
   return points
 }
 
+function epsilonToZero(v) {
+  if(Math.abs(v) < Math.pow(10, -5)) {
+    return 0
+  } else {
+    return v
+  }
+}
+
+function rotateX (v, theta) {
+  return [
+    v[0],
+    v[1]*Math.cos(theta) - v[2] * Math.sin(theta),
+    v[1]*Math.sin(theta) + v[2] * Math.cos(theta)
+  ]
+}
+function rotateY (v, theta) {
+  return [
+    v[0]*Math.cos(theta) + v[2]* Math.sin(theta),
+    v[1],
+    v[2]*Math.cos(theta) - v[0] * Math.sin(theta)
+  ]
+}
+function rotateZ (v, theta) {
+  return [
+    v[0]*Math.cos(theta) - v[1]*Math.sin(theta),
+    v[0]*Math.sin(theta) + v[1]*Math.cos(theta),
+    v[2]
+  ]
+}
+
+
+function vectorLength (v) {
+  return Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
+}
+
+function crossProduct(from, to) {
+  var n = new Array(3)
+  n[0] = from[1] * to[2] - from[2] * to[1]
+  n[1] = from[2] * to[0] - from[0] * to[2]
+  n[2] = from[0] * to[1] - from[1] * to[0]
+  return n
+}
+
+
 // #7 計算plane旋轉到XY平面的角度，併計算point旋轉到 XY平面的對應點
-function rotateToXY(plane, point) {
+function rotateToXY_a (plane, point) {
   var vr = [
     plane.ImageOrientationPatient[0],
     plane.ImageOrientationPatient[1],
     plane.ImageOrientationPatient[2]
   ]
-  // 投影XY 與 X 角度 (z軸旋轉)
-  var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1])
-  var theta1 = Math.acos(vr[0] / l1)
-  // 投影XZ 與 X 角度 (y軸旋轉)
-  var l2 = Math.sqrt(vr[0] * vr[0] + vr[2] * vr[2])
-  var theta2 = Math.acos(vr[0] / l2)
-
-  // y 轉
-  var x1 = (point[0] - plane.Vertices.topLeft[0]) * Math.cos(theta1) + (point[2] - plane.Vertices.topLeft[2]) * Math.sin(theta1)
-  var y1 = (point[1] - plane.Vertices.topLeft[1])
-  var z1 = (point[2] - plane.Vertices.topLeft[2]) * Math.cos(theta1) - (point[0] - plane.Vertices.topLeft[0]) * Math.sin(theta1)
-  // z 轉
-  var x2 = x1 * Math.cos(theta2) - y1 * Math.sin(theta2)
-  var y2 = x1 * Math.sin(theta2) + y1 * Math.cos(theta2)
-  var z2 = z1
-
-  return [x2 / plane.PixelSpacing[0], y2 / plane.PixelSpacing[1], z2]
+  var vc = [
+    plane.ImageOrientationPatient[3],
+    plane.ImageOrientationPatient[4],
+    plane.ImageOrientationPatient[5]
+  ]
+  if (dotProduct(vr, [1,0,0]) !== 0) {
+    var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1])
+    var theta1 = Math.acos(vr[0]/l1)
+    var result
+    var l2 = Math.sqrt(vr[1] * vr[1] + vr[2] * vr[2])
+    if (l2 === 0) {
+      var theta = Math.acos(vc[1])
+      if (crossProduct(vc, [0,1,0])[0] < 0){
+        theta1 = -1 * theta1
+      }
+      result = rotateX([
+        point[0] - plane.Vertices.topLeft[0],
+        point[1] - plane.Vertices.topLeft[1],
+        point[2] - plane.Vertices.topLeft[2]
+      ],theta1)
+    } else {
+      var theta1 = Math.acos(vr[1]/l2)
+      if (crossProduct(vr, [vr[0],Math.sqrt(1-vr[0]*vr[0]),0])[0] < 0){
+        theta1 = -1 * theta1
+      }
+      var theta2 = Math.acos(vr[0])
+      if (crossProduct([vr[0],Math.sqrt(1-vr[0]*vr[0]),0], [1,0,0])[2] < 0){
+        theta2 = -1 * theta2
+      }
+      // 計算vc傳後與(0,1,0)角度，決定是否翻轉
+      var vc_new = rotateZ(rotateX(vc,theta1), theta2)
+      var theta3 = Math.acos(dotProduct(vc_new, [0,1,0])/vectorLength(vc_new))
+      if (crossProduct(vc_new, [0,1,0])[0] < 0) {
+        theta3 = -1 * theta3
+      }
+      result = rotateX(rotateZ(rotateX([
+        point[0] - plane.Vertices.topLeft[0],
+        point[1] - plane.Vertices.topLeft[1],
+        point[2] - plane.Vertices.topLeft[2]
+      ],theta1), theta2), theta3)
+    }
+    return [epsilonToZero(result[0]/plane.PixelSpacing[0]), epsilonToZero(result[1]/plane.PixelSpacing[1]), epsilonToZero(result[2])]
+  } else {
+    // (x旋轉,與z軸夾角)
+    var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1] + vr[2] * vr[2])
+    var theta1 = Math.acos(vr[2]/l1)
+    if (crossProduct(vr, [0,0,1])[0] < 0) {
+      theta1 = -1 * theta1
+    }
+    // (y旋轉)
+    var theta2 = Math.PI/2
+    var theta3 = 0
+    // 計算vc傳後與(0,1,0)角度，決定是否翻轉
+    var vc_new = rotateY(rotateX(vc,theta1), theta2)
+    if (vc_new[1] < 0) {
+      // 翻轉 Math.PI
+      theta3 = Math.PI
+    }
+    var result = rotateX(rotateY(rotateX([
+      point[0] - plane.Vertices.topLeft[0],
+      point[1] - plane.Vertices.topLeft[1],
+      point[2] - plane.Vertices.topLeft[2]
+    ],theta1), theta2), theta3)
+    return [epsilonToZero(result[0]/plane.PixelSpacing[0]), epsilonToZero(result[1]/plane.PixelSpacing[1]), epsilonToZero(result[2])]
+  }
+  
 }
 
 function findPlaneEquation(topLeft, topRight, bottomLeft) {
@@ -281,16 +374,25 @@ loadDICOM('555.dcm').then((dataSet) => {
     plane2.NormalVector = normalVector(plane2)
     plane1.Vertices = vertices(plane1)
     plane2.Vertices = vertices(plane2)
-    var equation = findPlaneEquation(plane1.Vertices.topLeft, plane1.Vertices.topRight, plane1.Vertices.bottomLeft)
-    var coordiante1 = findRCSCoordinate(plane1, equation, plane1.ImagePositionPatient)
+    // var equation = findPlaneEquation(plane1.Vertices.topLeft, plane1.Vertices.topRight, plane1.Vertices.bottomLeft)
+    // var coordiante1 = findRCSCoordinate(plane1, equation, plane1.ImagePositionPatient)
+    // console.log("equation", equation)
+    // console.log("coordiante1", coordiante1)
     //   // console.log(plane1.Vertices, plane2.Vertices)
     var points = intersectionLocalizer(plane1, plane2)
     //   // console.log(points)
     //   // console.log('start', rotateToXY(plane2, points[0]))
     //   // console.log('end', rotateToXY(plane2, points[1]))
 
-    logToPage(rotateToXY(plane2, points[0])) // start point
-    logToPage(rotateToXY(plane2, points[1])) // end point
+    // logToPage(rotateToXY(plane2, points[0])) // start point
+    // logToPage(rotateToXY(plane2, points[1])) // end point
+    // logToPage(rotateToXY(plane1, points[0])) // start point
+    // logToPage(rotateToXY(plane1, points[1])) // end point
+    
+    logToPage(rotateToXY_a(plane2, points[0])) // start point
+    logToPage(rotateToXY_a(plane2, points[1])) // end point
+    logToPage(rotateToXY_a(plane1, points[0])) // start point
+    logToPage(rotateToXY_a(plane1, points[1])) // end point
   }
 })
 
