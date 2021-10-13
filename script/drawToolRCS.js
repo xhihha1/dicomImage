@@ -21,12 +21,15 @@
   // #2 比對兩個 dicom 之間是否有關連
   function checkReferenceID(source, destination) {
     if (source.FrameOfReferenceUID !== destination.FrameOfReferenceUID) {
+      console.log('ReferenceUID different')
       return false
     }
     if (!source.ImageOrientationPatient || !destination.ImageOrientationPatient) {
+      console.log('ImageOrientationPatient not exist')
       return false
     }
     if (JSON.stringify(source.ImageOrientationPatient) === JSON.stringify(destination.ImageOrientationPatient)) {
+      console.log('Same ImageOrientation')
       return false
     }
     return true
@@ -106,7 +109,7 @@
       t = (nP - nA) / (nB - nA);
       v0 = plane2.Vertices.topLeft
       v1 = plane2.Vertices.topRight
-      console.log('A', t, v0, v1)
+      // console.log('A', t, v0, v1)
       if (t > 0 && t <= 1) {
         var point = new Array(3)
         point[0] = v0[0] + t * (v1[0] - v0[0])
@@ -119,7 +122,7 @@
     }
     // line12
     if (Math.abs(nC - nB) > 0) {
-      console.log('B')
+      // console.log('B')
       t = (nP - nB) / (nC - nB);
       v0 = plane2.Vertices.topRight
       v1 = plane2.Vertices.bottomRight
@@ -138,7 +141,7 @@
       t = (nP - nC) / (nD - nC);
       v0 = plane2.Vertices.bottomRight
       v1 = plane2.Vertices.bottomLeft
-      console.log('C', t, v0, v1)
+      // console.log('C', t, v0, v1)
       if (t > 0 && t <= 1) {
         var point = new Array(3)
         point[0] = v0[0] + t * (v1[0] - v0[0])
@@ -151,7 +154,7 @@
     }
     // line30
     if (Math.abs(nA - nD) > 0) {
-      console.log('D')
+      // console.log('D')
       t = (nP - nD) / (nA - nD);
       v0 = plane2.Vertices.bottomLeft
       v1 = plane2.Vertices.topLeft
@@ -287,8 +290,8 @@
   }
 
   function postDicomRCSCoordination (planeDataSet1, planeDataSet2) {
-    const plane1 = FrameGeometry(planeDataSet1)
-    const plane2 = FrameGeometry(planeDataSet2)
+    const plane2 = FrameGeometry(planeDataSet1)
+    const plane1 = FrameGeometry(planeDataSet2)
     const result = new Array(2)
     const resultPlane1 = new Array(4)
     const resultPlane2 = new Array(4)
@@ -315,6 +318,8 @@
       resultPlane2[2] = re2[0]
       resultPlane2[3] = re2[1]
       result[1] = resultPlane2
+    } else {
+      console.log('dicom tag error')
     }
     return result
   }

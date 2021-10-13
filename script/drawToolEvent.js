@@ -72,6 +72,50 @@
     }
   });
 
+  $('#showRCSLine').click(function(){
+    var remove = false
+    for (var i = 0; i < editorList.length; i++) {
+      editorList[i].canvasView.forEachObject(function (obj) {
+        if (obj.referenceLine) {
+          editorList[i].canvasView.remove(obj)
+          remove = true
+        }
+      })
+    }
+    if (!remove) {
+      var layout = 1
+      if ($('#lContain').hasClass('layout2')) { layout = 2; }
+      if ($('#lContain').hasClass('layout3')) { layout = 3; }
+      if ($('#lContain').hasClass('layout4')) { layout = 4; }
+      for (var i = 0; i < layout; i++) {
+        for (var j = i + 1; j < layout; j++) {
+          var dataSet1 = dicomFileList[editorList[i].dicomFileName].dataSet
+          var dataSet2 = dicomFileList[editorList[j].dicomFileName].dataSet
+          // console.log(postDicomRCSCoordination(dataSet1, dataSet2))
+          var linePlane = postDicomRCSCoordination(dataSet1, dataSet2)
+          if (linePlane.length === 2 && linePlane[0] && linePlane[1]){
+            new editorList[i].drawLine(editorList[i], {
+              stroke: '#ed91fc',
+              fill: '#ed91fc'
+            },
+            [
+              [linePlane[0][0], linePlane[0][1]],
+              [linePlane[0][2], linePlane[0][3]]
+            ])
+            new editorList[j].drawLine(editorList[j], {
+              stroke: '#ed91fc',
+              fill: '#ed91fc'
+            },
+            [
+              [linePlane[1][0], linePlane[1][1]],
+              [linePlane[1][2], linePlane[1][3]]
+            ])
+          }
+        }
+      }
+    }
+  })
+
   var mouseX, mouseY, newX, newY, startWW, startWC, newWWval, newWLval, startChangeWW = false, timeoutIdx;
   function wlMouseDown (e) {
     e.preventDefault();
@@ -201,7 +245,7 @@
     function dropFunc (activeEdit, event) {
       event.originalEvent.dataTransfer.dropEffect = 'move';
       event.originalEvent.dataTransfer.effectAllowed = 'move';
-      console.log('B', this.result, event.originalEvent.dataTransfer)
+      // console.log('B', this.result, event.originalEvent.dataTransfer)
       // fetch FileList object
       var files = event.originalEvent.dataTransfer.files
       if (event.target && event.target.files) {

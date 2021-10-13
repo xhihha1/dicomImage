@@ -9,7 +9,7 @@
 
 
   document.addEventListener('wlChange', (event) => {
-    console.log('--- detail ---', event.detail);
+    // console.log('--- detail ---', event.detail);
     document.getElementById('newWW').value = event.detail.ww;
     document.getElementById('newWL').value = event.detail.wl;
   });
