@@ -72,26 +72,26 @@
     }
   });
 
-  var mouseX, mouseY, newX, newY, startWW, startWC, startChangeWW = false, timeoutIdx;
+  var mouseX, mouseY, newX, newY, startWW, startWC, newWWval, newWLval, startChangeWW = false, timeoutIdx;
   function wlMouseDown (e) {
+    e.preventDefault();
     mouseX = e.clientX
     mouseY = e.clientY
-    startWW = parseFloat($('#newWW').val())
-    startWC = parseFloat($('#newWL').val())
+    startWW = startWW || parseFloat($('#newWW').val())
+    startWC = startWC || parseFloat($('#newWL').val())
     startChangeWW = true
   }
   function wlMouseMove (e) {
+    e.preventDefault();
     // clearTimeout(timeoutIdx)
     // timeoutIdx = setTimeout(function () {
     if (startChangeWW) {
-      console.log('in')
-      console.log('start', startWW, startWC)
       newX = e.clientX
       newY = e.clientY
       var deltaX = mouseX - newX;
       var deltaY = mouseY - newY;
-      var newWWval = parseFloat(startWW + deltaX / 5)
-      var newWLval = parseFloat(startWC + deltaY / 5)
+      newWWval = parseFloat(startWW + deltaX / 5)
+      newWLval = parseFloat(startWC + deltaY / 5)
       var dataSet = dicomFileList[activeEdit.dicomFileName].dataSet
       // var op = changeDicomWL(dataSet, newWWval, newWLval)
       var op = changeDicomWLD(dataSet, newWWval, newWLval)
@@ -103,14 +103,22 @@
         left: 0,
         top: 0,
       });
-      console.log('new', newWWval, newWLval)
       document.getElementById('newWW').value = newWWval;
       document.getElementById('newWL').value = newWLval;
+      edit.dicomInfo.ww = newWWval;
+      edit.dicomInfo.wl = newWLval;
     }
     // }, 10)
   }
   function wlMouseUp (e) {
+    e.preventDefault();
+    startWW = newWWval
+    startWC = newWLval
+    $('#newWW').val(newWWval)
+    $('#newWL').val(newWLval)
     startChangeWW = false
+    edit.dicomInfo.ww = newWWval;
+    edit.dicomInfo.wl = newWLval;
   }
   
   $('#btnExport').click(function () {
@@ -166,6 +174,8 @@
       left: 0,
       top: 0,
     });
+    edit.dicomInfo.ww = ww;
+    edit.dicomInfo.wl = wc;
   })
   $('#newWL').on('change', function () {
     var ww = parseFloat(document.getElementById('newWW').value)
@@ -182,6 +192,8 @@
       left: 0,
       top: 0,
     });
+    edit.dicomInfo.ww = ww;
+    edit.dicomInfo.wl = wc;
   })
 
     // ---------- drag And drop ------------
