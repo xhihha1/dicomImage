@@ -414,7 +414,8 @@
     var imgMax = 0;
     var tempPixel
 
-    var array = new Uint8ClampedArray(obj.data);
+    // var array = new Uint8ClampedArray(obj.data);
+    var array = new Float64Array(obj.data);
     var canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
