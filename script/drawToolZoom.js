@@ -1,8 +1,10 @@
 (function () {
 
-  window.imagePath = 'IMG00001.dcm'
+  // window.imagePath = 'IMG00001.dcm'
   // window.imagePath = '1-1.dcm'
+  // window.imagePath = '1211111_20200921_CT_3_153_001.dcm'
   // window.imagePath = 'DAA0001VS019.dcm'
+  window.imagePath = 'I0076353.dcm'
   window.editorList = []
   window.activeEdit = undefined
   window.dicomFileList = {}
@@ -369,6 +371,8 @@
     const image = daikon.Series.parseImage(data2);
     var windowWidth = image.getWindowWidth()
     var windowCenter = image.getWindowCenter()
+    console.log('image', image)
+    console.log(image.getNumberOfSamplesPerPixel())
     var op = changeDicomWLD(image, windowWidth, windowCenter)
     if (!dicomFileList[fileName]) {
       dicomFileList[fileName] = {}
@@ -404,9 +408,12 @@
 
   function changeDicomWLD(dataSet, windowWidth, windowCenter) {
     var image = dataSet
+    var samplesPerPixel = image.getNumberOfSamplesPerPixel()
+    var bitsAllocated = image.getBitsAllocated()
     var obj = image.getInterpretedData(false, true);
     var width = obj.numCols;
     var height = obj.numRows;
+    console.log('width', width, 'height', height, 'samplesPerPixel', samplesPerPixel, 'bitsAllocated', bitsAllocated, obj, obj.data)
     var slope = 1
     var intercept = 0
 
@@ -423,69 +430,133 @@
     var imgData = ctx.createImageData(width, height); // width x height
     var data = imgData.data;
     // ------------------
-    if (windowWidth === null || windowCenter === null ||
-      windowWidth === undefined || windowCenter === undefined) {
-      for (var y = 0; y < height; y++) {
-        for (var x = 0; x < width; x++) {
-          var idx = y * width + x;
-          var r = array[idx];
-          tempPixel = parseFloat(r)
+    if (
+      bitsAllocated === 8 &&
+      (samplesPerPixel === 3 || samplesPerPixel === 4)
+    ) {
+      if (windowWidth === null || windowCenter === null ||
+        windowWidth === undefined || windowCenter === undefined) {
+        for (let p = 0; p < array.length; p++) {
+          tempPixel = parseFloat(array[p])
           if (tempPixel < imgMin) {
             imgMin = tempPixel
           } else if (tempPixel > imgMax) {
             imgMax = tempPixel
           }
         }
+      } else {
+        imgMin = parseFloat(windowCenter - windowWidth / 2) // minimum HU level
+        imgMax = parseFloat(windowCenter + windowWidth / 2) // maximum HU level
       }
-    } else {
-      imgMin = parseFloat(windowCenter - windowWidth / 2) // minimum HU level
-      imgMax = parseFloat(windowCenter + windowWidth / 2) // maximum HU level
-    }
-    var i = 0;
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        var idx = y * width + x;
-        var r = array[idx];
-        var tempPixel = parseFloat(r) * parseFloat(slope) + parseFloat(intercept)
-        tempPixel = r
-        if (tempPixel < imgMin) {
-          tempPixel = imgMin
-        } else if (tempPixel > imgMax) {
-          tempPixel = imgMax
+      var i = 0;
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          if (samplesPerPixel === 3) {
+            var idx = y * width + x;
+            var r = array[3 * idx + 0];
+            var g = array[3 * idx + 1];
+            var b = array[3 * idx + 2];
+            data[i] = pixel(r, slope, intercept, imgMin, imgMax);
+            data[i + 1] = pixel(g, slope, intercept, imgMin, imgMax);
+            data[i + 2] = pixel(b, slope, intercept, imgMin, imgMax);
+            data[i + 3] = 255;
+            i += 4;
+          }
+          if (samplesPerPixel === 4) {
+            var idx = y * width + x;
+            var r = array[4 * idx + 0];
+            var g = array[4 * idx + 1];
+            var b = array[4 * idx + 2];
+            data[i] = pixel(r, slope, intercept, imgMin, imgMax);
+            data[i + 1] = pixel(g, slope, intercept, imgMin, imgMax);
+            data[i + 2] = pixel(b, slope, intercept, imgMin, imgMax);
+            data[i + 3] = array[4 * idx + 3];
+            i += 4;
+          }
         }
-        uint8pixel = parseInt((tempPixel - imgMin) / (imgMax - imgMin) * 255)
-        data[i] = uint8pixel;
-        data[i + 1] = uint8pixel;
-        data[i + 2] = uint8pixel;
-        data[i + 3] = 255;
-        i += 4;
       }
-    }
-    // ------------------
-    // for (var i = 3, k = 0; i < data.byteLength; i = i + 4, k = k + 1) {
-    //   var result = (array[k] & 0xff);
-    //   // data[i] = 255 - result;
-    //   data[i - 3] = result;
-    //   data[i - 2] = result;
-    //   data[i - 1] = result;
-    //   data[i] = 255;
-    // }
-    ctx.putImageData(imgData, 0, 0);
-    return {
-      src: canvas.toDataURL(),
-      ww: imgMax - imgMin,
-      wl: (imgMin + imgMax) / 2,
-      width: width,
-      height: height
-    }
+      ctx.putImageData(imgData, 0, 0);
+      return {
+        src: canvas.toDataURL(),
+        ww: imgMax - imgMin,
+        wl: (imgMin + imgMax) / 2,
+        width: width,
+        height: height
+      }
+      // return decodeJPEGBaseline8BitColor(imageFrame, pixelData, canvas);
+    } else {
+      if (windowWidth === null || windowCenter === null ||
+        windowWidth === undefined || windowCenter === undefined) {
+        for (var y = 0; y < height; y++) {
+          for (var x = 0; x < width; x++) {
+            var idx = y * width + x;
+            var r = array[idx];
+            tempPixel = parseFloat(r)
+            if (tempPixel < imgMin) {
+              imgMin = tempPixel
+            } else if (tempPixel > imgMax) {
+              imgMax = tempPixel
+            }
+          }
+        }
+      } else {
+        imgMin = parseFloat(windowCenter - windowWidth / 2) // minimum HU level
+        imgMax = parseFloat(windowCenter + windowWidth / 2) // maximum HU level
+      }
+      var i = 0;
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          var idx = y * width + x;
+          var r = array[idx];
+          var tempPixel = parseFloat(r) * parseFloat(slope) + parseFloat(intercept)
+          // tempPixel = r
+          if (tempPixel < imgMin) {
+            tempPixel = imgMin
+          } else if (tempPixel > imgMax) {
+            tempPixel = imgMax
+          }
+          uint8pixel = parseInt((tempPixel - imgMin) / (imgMax - imgMin) * 255)
+          data[i] = uint8pixel;
+          data[i + 1] = uint8pixel;
+          data[i + 2] = uint8pixel;
+          data[i + 3] = 255;
+          i += 4;
+        }
+      }
+      // ------------------
+      // for (var i = 3, k = 0; i < data.byteLength; i = i + 4, k = k + 1) {
+      //   var result = (array[k] & 0xff);
+      //   // data[i] = 255 - result;
+      //   data[i - 3] = result;
+      //   data[i - 2] = result;
+      //   data[i - 1] = result;
+      //   data[i] = 255;
+      // }
+      ctx.putImageData(imgData, 0, 0);
+      return {
+        src: canvas.toDataURL(),
+        ww: imgMax - imgMin,
+        wl: (imgMin + imgMax) / 2,
+        width: width,
+        height: height
+      }
+    } // ---------
+    
   }
 
   window.changeDicomWLD = changeDicomWLD
 
 
-
-
-
+  function pixel (c, slope, intercept, imgMin, imgMax) {
+    var tempPixel = parseFloat(c) * parseFloat(slope) + parseFloat(intercept)
+    // tempPixel = r
+    if (tempPixel < imgMin) {
+      tempPixel = imgMin
+    } else if (tempPixel > imgMax) {
+      tempPixel = imgMax
+    }
+    return uint8pixel = parseInt((tempPixel - imgMin) / (imgMax - imgMin) * 255)
+  }
 
 
 })()

@@ -218,8 +218,8 @@
       left: 0,
       top: 0,
     });
-    edit.dicomInfo.ww = ww;
-    edit.dicomInfo.wl = wc;
+    activeEdit.dicomInfo.ww = ww;
+    activeEdit.dicomInfo.wl = wc;
   })
   $('#newWL').on('change', function () {
     var ww = parseFloat(document.getElementById('newWW').value)
