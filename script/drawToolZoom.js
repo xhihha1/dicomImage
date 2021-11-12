@@ -201,7 +201,7 @@
     var pixelData = new Uint16Array(dataSet.byteArray.buffer, pixelDataElement.dataOffset, pixelDataElement
       .length / 2);
 
-    var img_min = 9999;
+    var img_min = 65535;
     var img_max = 0;
 
     var canvasCopy = document.createElement("canvas");
@@ -417,7 +417,7 @@
     var slope = 1
     var intercept = 0
 
-    var imgMin = 9999;
+    var imgMin = 65535;
     var imgMax = 0;
     var tempPixel
 
