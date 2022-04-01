@@ -196,7 +196,7 @@
   $('#btnLoadImage').click(function () {
     activeEdit.canvasView.loadFromJSON({})
     activeEdit.canvasView.setBackgroundImage('')
-    newZoomToPoint({
+    activeEdit.canvasView.zoomToPoint({
       x: 0,
       y: 0
     }, 1)
@@ -258,6 +258,10 @@
       if (!files) { return false; }
       // process all File objects
       for (var i = 0, f; f = files[i]; i++) {
+        // console.log('files', files)
+      // for (var i = 0, f; i < files.length; i++) {
+      //   var fileName = files[i].name
+      //   f = files[i]
         var fileName = f.name
         // console.log(f.name, 'type', f.type, 'size', f.size)
         if (i === 0) {

@@ -4,10 +4,12 @@
   // window.imagePath = '1-1.dcm'
   // window.imagePath = '1211111_20200921_CT_3_153_001.dcm'
   // window.imagePath = 'DAA0001VS019.dcm'
-  window.imagePath = 'I0076353.dcm'
+  window.imagePath = './001/I0182471.dcm'
+  // window.imagePath = 'I0076353.dcm'
   window.editorList = []
   window.activeEdit = undefined
   window.dicomFileList = {}
+  window.fileDataView = {}
 
 
   document.addEventListener('wlChange', (event) => {
@@ -49,6 +51,7 @@
       if (!i) {
         window.editorList.push(initCanvas('canvasParent', 'mainEditor'))
         loadInfoD(editorList[i], window.imagePath)
+        // loadFolder(editorList[i])
       } else { window.editorList.push(initCanvas('canvasParent' + i, 'mainEditor' + i)) }
       // loadInfoD(editorList[i], window.imagePath)
     }
@@ -367,8 +370,11 @@
   }
 
   function parseBufferArrayAndSetBackground (edit, fileName, arrayBuffer) {
+    console.log('arrayBuffer', arrayBuffer)
     const data2 = new DataView(arrayBuffer);
+    console.log('data2', data2)
     const image = daikon.Series.parseImage(data2);
+    window.image = image
     var windowWidth = image.getWindowWidth()
     var windowCenter = image.getWindowCenter()
     console.log('image', image)
@@ -378,6 +384,7 @@
       dicomFileList[fileName] = {}
     }
     dicomFileList[fileName]['dataSet'] = image
+    dicomFileList[fileName]['imageNum'] = image.getImageNumber()
     edit.dicomFileName = fileName
     edit.dicomInfo = {
       ww: op.ww,
@@ -413,7 +420,7 @@
     var obj = image.getInterpretedData(false, true);
     var width = obj.numCols;
     var height = obj.numRows;
-    console.log('width', width, 'height', height, 'samplesPerPixel', samplesPerPixel, 'bitsAllocated', bitsAllocated, obj, obj.data)
+    // console.log('width', width, 'height', height, 'samplesPerPixel', samplesPerPixel, 'bitsAllocated', bitsAllocated, obj, obj.data)
     var slope = 1
     var intercept = 0
 
@@ -558,5 +565,112 @@
     return uint8pixel = parseInt((tempPixel - imgMin) / (imgMax - imgMin) * 255)
   }
 
+  function isNumeric(str) {
+    if (typeof str != "string") return false // we only process strings!  
+    return !isNaN(str) && // use type coercion to parse the _entirety_ of the string (`parseFloat` alone does not do this)...
+           !isNaN(parseFloat(str)) // ...and ensure strings of whitespace fail
+  }
+
+  function loop () {
+    // console.log('A0')
+    if(typeof edit !== 'undefined') {
+      const listAry = []
+      for (var k in dicomFileList) {
+        dicomFileList[k].fileName = k
+        listAry.push(dicomFileList[k])
+      }
+      listAry.sort(function(a, b){
+        return parseInt(a.imageNum) - parseInt(b.imageNum)
+        // if(isNumeric(a.imageNum) && isNumeric(b.imageNum)) {
+        //   return parseInt(a.imageNum) - parseInt(b.imageNum)
+        // } else {
+        //   console.log('why?')
+        //   return a.fileName - b.fileName
+        // }
+      })
+      // console.log('A1', listAry)
+      for (var i = 0;listAry.length > 1 && i < listAry.length; i++) {
+        // console.log('A2', edit.dicomFileName, listAry[i].fileName)
+        if(edit.dicomFileName === listAry[i].fileName) {
+          // console.log('A3')
+          const j = i !== listAry.length - 1 ? i + 1 : 0
+          let image = listAry[j].dataSet
+          var windowWidth = image.getWindowWidth()
+          var windowCenter = image.getWindowCenter()
+          var op = changeDicomWLD(image, windowWidth, windowCenter)
+          edit.dicomFileName = listAry[j].fileName
+          edit.dicomInfo = {
+            ww: op.ww,
+            wl: op.wl,
+            width: op.width,
+            height: op.height
+          }
+          edit.canvasView.setBackgroundImage(op.src, function () {
+            edit.canvasView.renderAll();
+          }, {
+            originX: 'left',
+            originY: 'top',
+            left: 0,
+            top: 0,
+          });
+          document.dispatchEvent(new CustomEvent('wlChange', {
+            detail: {
+              ww: op.ww,
+              wl: op.wl
+            }
+          }));
+          // 圖移置中
+          var rs = resizeCanvas(edit.canvasView.width, edit.canvasView.height, op.width, op.height)
+          edit.canvasView.setZoom(rs.zoom)
+          edit.canvasView.absolutePan(rs.pan)
+          break;
+        }
+      }
+      // for (var k in dicomFileList) {
+      //   if(edit.dicomFileName === k) { break; }
+      //   let image = dicomFileList[k].dataSet
+      //   var windowWidth = image.getWindowWidth()
+      //   var windowCenter = image.getWindowCenter()
+      //   var op = changeDicomWLD(image, windowWidth, windowCenter)
+      //   edit.dicomFileName = k
+      //   edit.dicomInfo = {
+      //     ww: op.ww,
+      //     wl: op.wl,
+      //     width: op.width,
+      //     height: op.height
+      //   }
+      //   edit.canvasView.setBackgroundImage(op.src, function () {
+      //     edit.canvasView.renderAll();
+      //   }, {
+      //     originX: 'left',
+      //     originY: 'top',
+      //     left: 0,
+      //     top: 0,
+      //   });
+      //   document.dispatchEvent(new CustomEvent('wlChange', {
+      //     detail: {
+      //       ww: op.ww,
+      //       wl: op.wl
+      //     }
+      //   }));
+      //   // 圖移置中
+      //   var rs = resizeCanvas(edit.canvasView.width, edit.canvasView.height, op.width, op.height)
+      //   edit.canvasView.setZoom(rs.zoom)
+      //   edit.canvasView.absolutePan(rs.pan)
+      // }
+    }
+    setTimeout(function(){loop()},300)
+  }
+  loop()
+
+  function loadFolder(edit) {
+    const str = './001/I0182'
+    const dcm = '.dcm'
+    // 'I0182508.dcm'
+    for (var i = 472; i < 509; i++) {
+      var filename = str + i + dcm
+      loadInfoD(edit, filename)
+    }
+  }
 
 })()

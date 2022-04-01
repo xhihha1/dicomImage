@@ -16,6 +16,31 @@ function FrameGeometry(dataSet) {
     Rows: dataSet.tagsFlat['00280010'].value[0] // 圖 X 長度
   }
 }
+// function matrixMultiplication(a, b) {
+//   return a.map(function (row) {
+//     return row.map(function (_, i) {
+//       return row.reduce(function (sum, cell, j) {
+//         return sum + cell * b[j][i];
+//       }, 0)
+//     })
+//   })
+// }
+
+function matrixMultiplication(a, b) {
+  var len = a.length,
+    arr = [];
+  for (var i = 0; i < len; i++) {
+    arr[i] = [];
+    for (var j = 0; j < len; j++) {
+      arr[i][j] = 0; //每次都重新置为0
+      for (var k = 0; k < len; k++) {
+        arr[i][j] += a[i][k] * b[k][j]; //
+      }
+    }
+  }
+  return arr;
+}
+
 
 // #2 比對兩個 dicom 之間是否有關連
 function checkReferenceID(source, destination) {
@@ -118,10 +143,10 @@ function intersectionLocalizer(plane1, plane2) {
   }
   // line12
   if (Math.abs(nC - nB) > 0) {
-    console.log('B')
     t = (nP - nB) / (nC - nB);
     v0 = plane2.Vertices.topRight
     v1 = plane2.Vertices.bottomRight
+    console.log('B', t, v0, v1)
     if (t > 0 && t <= 1) {
       var point = new Array(3)
       point[0] = v0[0] + t * (v1[0] - v0[0])
@@ -150,10 +175,10 @@ function intersectionLocalizer(plane1, plane2) {
   }
   // line30
   if (Math.abs(nA - nD) > 0) {
-    console.log('D')
     t = (nP - nD) / (nA - nD);
     v0 = plane2.Vertices.bottomLeft
     v1 = plane2.Vertices.topLeft
+    console.log('D', t, v0, v1)
     if (t > 0 && t <= 1) {
       var point = new Array(3)
       point[0] = v0[0] + t * (v1[0] - v0[0])
@@ -224,12 +249,12 @@ function rotateToXY_a (plane, point) {
     plane.ImageOrientationPatient[5]
   ]
   if (dotProduct(vr, [1,0,0]) !== 0) {
-    var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1])
-    var theta1 = Math.acos(vr[0]/l1)
+    // var l1 = Math.sqrt(vr[0] * vr[0] + vr[1] * vr[1])
+    // var theta1 = Math.acos(vr[0]/l1)
     var result
     var l2 = Math.sqrt(vr[1] * vr[1] + vr[2] * vr[2])
     if (l2 === 0) {
-      var theta = Math.acos(vc[1])
+      var theta1 = Math.acos(vc[1])
       if (crossProduct(vc, [0,1,0])[0] < 0){
         theta1 = -1 * theta1
       }
@@ -326,18 +351,20 @@ function findRCSCoordinate(patient, equation, voxel) {
   	[xAxis[2], yAxis[2], 0, imgPosition[2]],
   	[       0,        0, 0,              0]
   ]
-
+  console.log('affineMatrix', affineMatrix)
+  console.log('voxelMatrix', voxelMatrix)
   // var patientCoord mat.Dense
   // patientCoord.Mul(affineMatrix, voxelMatrix)	
   // //fmt.Println("patientCoord: ", patientCoord)
-
+  var patientCoord = matrixMultiplication(affineMatrix, voxelMatrix)
+  console.log('patientCoord', patientCoord)
   // point := Point{
   // 	int(patientCoord.At(0, 0)),
   // 	int(patientCoord.At(1, 0)),
   // 	int(patientCoord.At(2, 0)),
   // }
 
-  return point
+  // return point
 }
 
 
@@ -361,14 +388,15 @@ function loadDICOM(fileName) {
 
 // #0 程式執行起點
 var plane1, plane2;
-loadDICOM('555.dcm').then((dataSet) => {
-  console.log(dataSet)
+loadDICOM('for_ken/a/960930_68431573.dcm').then((dataSet) => { // 'for_ken/a/960930_68431567.dcm' 'for_ken/a/960930_68431573.dcm'
+  console.log('**', dataSet)
   plane1 = FrameGeometry(dataSet)
-  return loadDICOM('572.dcm')
+  return loadDICOM('for_ken/coronal/coronal39.dcm')
+  // return loadDICOM('for_ken/a/960930_68431573.dcm')
 }).then((dataSet) => {
   plane2 = FrameGeometry(dataSet)
-  // // console.log(plane1)
-  // // console.log(plane2)
+  console.log('plane1', plane1)
+  console.log('plane2', plane2)
   if (checkReferenceID(plane1, plane2)) {
     plane1.NormalVector = normalVector(plane1)
     plane2.NormalVector = normalVector(plane2)
@@ -380,6 +408,11 @@ loadDICOM('555.dcm').then((dataSet) => {
     // console.log("coordiante1", coordiante1)
     //   // console.log(plane1.Vertices, plane2.Vertices)
     var points = intersectionLocalizer(plane1, plane2)
+    console.log('NormalVector1', plane1.NormalVector)
+    console.log('NormalVector2', plane2.NormalVector)
+    console.log('Vertices1', plane1.Vertices)
+    console.log('Vertices2', plane2.Vertices)
+    console.log('points', points, points[0], points[1])
     //   // console.log(points)
     //   // console.log('start', rotateToXY(plane2, points[0]))
     //   // console.log('end', rotateToXY(plane2, points[1]))
@@ -388,11 +421,39 @@ loadDICOM('555.dcm').then((dataSet) => {
     // logToPage(rotateToXY(plane2, points[1])) // end point
     // logToPage(rotateToXY(plane1, points[0])) // start point
     // logToPage(rotateToXY(plane1, points[1])) // end point
-    
-    logToPage(rotateToXY_a(plane2, points[0])) // start point
-    logToPage(rotateToXY_a(plane2, points[1])) // end point
-    logToPage(rotateToXY_a(plane1, points[0])) // start point
-    logToPage(rotateToXY_a(plane1, points[1])) // end point
+    let result = new Array(2)
+    const resultPlane1 = new Array(4)
+    const resultPlane2 = new Array(4)
+    if (points.length === 2) {
+      const rs1 = rotateToXY_a(plane2, points[0]) // start point
+      const re1 = rotateToXY_a(plane2, points[1]) // end point
+      const rs2 = rotateToXY_a(plane1, points[0]) // start point
+      const re2 = rotateToXY_a(plane1, points[1]) // end point
+      resultPlane1[0] = rs1[0]
+      resultPlane1[1] = rs1[1]
+      resultPlane1[2] = re1[0]
+      resultPlane1[3] = re1[1]
+      result[0] = resultPlane1
+      resultPlane2[0] = rs2[0]
+      resultPlane2[1] = rs2[1]
+      resultPlane2[2] = re2[0]
+      resultPlane2[3] = re2[1]
+      result[1] = resultPlane2
+    } else {
+      result = []
+    }
+    logToPage(result)
+    // logToPage(rotateToXY_a(plane2, points[0])) // start point
+    // // debugger
+    // logToPage(rotateToXY_a(plane2, points[1])) // end point
+    // logToPage(rotateToXY_a(plane1, points[0])) // start point
+    // logToPage(rotateToXY_a(plane1, points[1])) // end point
+    // var startPoint = rotateToXY_a(plane2, points[0])
+    // var endPoint = rotateToXY_a(plane2, points[1])
+    // var startPoint2 = rotateToXY_a(plane1, points[0])
+    // var endPoint2 = rotateToXY_a(plane1, points[1])
+    // logToPage([startPoint[0], startPoint[1], endPoint[0], endPoint[1]])
+    // logToPage([startPoint2[0], startPoint2[1], endPoint2[0], endPoint2[1]])
   }
 })
 
