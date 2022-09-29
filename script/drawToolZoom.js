@@ -4,7 +4,8 @@
   // window.imagePath = '1-1.dcm'
   // window.imagePath = '1211111_20200921_CT_3_153_001.dcm'
   // window.imagePath = 'DAA0001VS019.dcm'
-  window.imagePath = './001/I0182471.dcm'
+  // window.imagePath = './001/I0182471.dcm'
+  window.imagePath = '../035419_156990553.dcm'
   // window.imagePath = 'I0076353.dcm'
   window.editorList = []
   window.activeEdit = undefined
@@ -278,11 +279,6 @@
   }
   window.resizeCanvas = resizeCanvas
 
-
-
-
-
-
   // use daikon ---------------------------------------------------------
   function loadDICOMD(fileName) {
     return new Promise((resolve, reject) => {
@@ -290,7 +286,8 @@
       oReq.open("GET", fileName, true);
       oReq.responseType = "arraybuffer";
       oReq.onload = function (oEvent) {
-        var arrayBuffer = oReq.response; // Note: not oReq.responseText
+        // var arrayBuffer = oReq.response; // Note: not oReq.responseText
+        var arrayBuffer = oEvent.target.response
         if (arrayBuffer) {
           // var byteArray = new Uint8Array(arrayBuffer);
           // var dataSet = dicomParser.parseDicom(byteArray);
@@ -417,7 +414,9 @@
     var image = dataSet
     var samplesPerPixel = image.getNumberOfSamplesPerPixel()
     var bitsAllocated = image.getBitsAllocated()
+    var planarConfig = image.getPlanarConfig()
     var obj = image.getInterpretedData(false, true);
+    
     var width = obj.numCols;
     var height = obj.numRows;
     // console.log('width', width, 'height', height, 'samplesPerPixel', samplesPerPixel, 'bitsAllocated', bitsAllocated, obj, obj.data)
@@ -428,8 +427,8 @@
     var imgMax = 0;
     var tempPixel
 
-    // var array = new Uint8ClampedArray(obj.data);
-    var array = new Float64Array(obj.data);
+    var array = new Uint8ClampedArray(obj.data);
+    // var array = new Float64Array(obj.data);
     var canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
@@ -455,18 +454,39 @@
         imgMin = parseFloat(windowCenter - windowWidth / 2) // minimum HU level
         imgMax = parseFloat(windowCenter + windowWidth / 2) // maximum HU level
       }
+      console.log('width', width, 'height', height, 'array', array.length)
       var i = 0;
       for (var y = 0; y < height; y++) {
         for (var x = 0; x < width; x++) {
           if (samplesPerPixel === 3) {
             var idx = y * width + x;
-            var r = array[3 * idx + 0];
-            var g = array[3 * idx + 1];
-            var b = array[3 * idx + 2];
+            if (planarConfig === 1) {
+              var shift = height * width;
+              // var result = (array[idx] & 0xff);
+              // var result1 = (array[idx + shift] & 0xff);
+              // var result2 = (array[idx + shift * 2] & 0xff);
+              var r = pixel((array[idx] & 0xff), slope, intercept, imgMin, imgMax);
+              var g = pixel((array[idx + shift] & 0xff), slope, intercept, imgMin, imgMax);
+              var b = pixel((array[idx + shift*2] & 0xff), slope, intercept, imgMin, imgMax);
+              // data[i] = result;
+              // data[i+1] = result1;
+              // data[i+2] = result2;
+              // data[i+3] = 255;
+            } else {
+              var r = array[3 * idx + 0];
+              var g = array[3 * idx + 1];
+              var b = array[3 * idx + 2];
+            }
             data[i] = pixel(r, slope, intercept, imgMin, imgMax);
             data[i + 1] = pixel(g, slope, intercept, imgMin, imgMax);
             data[i + 2] = pixel(b, slope, intercept, imgMin, imgMax);
             data[i + 3] = 255;
+            // if (idx < 10 || idx > height * width - 10) {
+            //   console.log('--------' + idx)
+            //   console.log(i , idx, 3*idx+0)
+            //   console.log(i+1 , idx, 3*idx+1)
+            //   console.log(i+2 , idx, 3*idx+2)
+            // }
             i += 4;
           }
           if (samplesPerPixel === 4) {
@@ -483,6 +503,7 @@
         }
       }
       ctx.putImageData(imgData, 0, 0);
+      // document.querySelector("#app").setAttribute("src", canvas.toDataURL());
       return {
         src: canvas.toDataURL(),
         ww: imgMax - imgMin,
@@ -530,6 +551,7 @@
           i += 4;
         }
       }
+      console.log('width', width, 'height', height, 'array', array.length)
       // ------------------
       // for (var i = 3, k = 0; i < data.byteLength; i = i + 4, k = k + 1) {
       //   var result = (array[k] & 0xff);
