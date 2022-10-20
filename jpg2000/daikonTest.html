@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+  <canvas id="myCanvas" width="800" height="600" style="border:1px solid #000000;"></canvas>
+  <hr/>
+  <canvas id="myOpenJpeg" width="960" height="720" style="border:1px solid #000000;"></canvas>
+  <hr/>
+  <img id="app" />
+  <div>WW:<input type="range" id="newWW" name="ww" min="0" max="9999"><span id="wwText"></span></div>
+  <div>WL:<input type="range" id="newWL" name="wc" min="0" max="9999"><span id="wlText"></span></div>
+  <div><button id="getValue">get</button></div>
+</body>
+<script src="jquery.min.js"></script>
+<script src="dicomParser.min.js"></script>
+<script src="daikon.js"></script>
+<script src="jpx.js"></script>
+<script src="jpeg-ls.js"></script>
+<script src="jpeg-baseline.js"></script>
+<script src="charLS-DynamicMemory-browser.js"></script>
+<script src="openJPEG-FixedMemory.js"></script>
+<script>
+  function loadDICOM(fileName) {
+    return new Promise((resolve, reject) => {
+      var oReq = new XMLHttpRequest();
+      oReq.open("GET", fileName, true);
+      oReq.responseType = "arraybuffer";
+      oReq.onload = function (oEvent) {
+        var arrayBuffer = oReq.response; // Note: not oReq.responseText
+        if (arrayBuffer) {
+          // var byteArray = new Uint8Array(arrayBuffer);
+          // var dataSet = dicomParser.parseDicom(byteArray);
+          resolve(arrayBuffer)
+        }
+      };
+      oReq.send(null);
+    })
+  }
+  function decodeOpenJPEG (data, bytesPerPixel, signed) {
+    // OpenJPEG
+    let openJPEG = OpenJPEG();
+    const dataPtr = openJPEG._malloc(data.length);
+    openJPEG.writeArrayToMemory(data, dataPtr);
+    console.log('decodeOpenJPEG---')
+    // create param outpout
+    const imagePtrPtr = openJPEG._malloc(4);
+    const imageSizePtr = openJPEG._malloc(4);
+    const imageSizeXPtr = openJPEG._malloc(4);
+    const imageSizeYPtr = openJPEG._malloc(4);
+    const imageSizeCompPtr = openJPEG._malloc(4);
+    
+    const t0 = new Date().getTime();
+    const ret = openJPEG.ccall(
+      'jp2_decode',
+      'number',
+      ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [
+        dataPtr,
+        data.length,
+        imagePtrPtr,
+        imageSizePtr,
+        imageSizeXPtr,
+        imageSizeYPtr,
+        imageSizeCompPtr,
+      ]
+    );
+    
+    if (ret !== 0) {
+      console.log('[opj_decode] decoding failed!');
+      openJPEG._free(dataPtr);
+      openJPEG._free(openJPEG.getValue(imagePtrPtr, '*'));
+      openJPEG._free(imageSizeXPtr);
+      openJPEG._free(imageSizeYPtr);
+      openJPEG._free(imageSizePtr);
+      openJPEG._free(imageSizeCompPtr);
+
+      return;
+    }
+    const imagePtr = openJPEG.getValue(imagePtrPtr, '*');
+    
+    const image = {
+      length: openJPEG.getValue(imageSizePtr, 'i32'),
+      sx: openJPEG.getValue(imageSizeXPtr, 'i32'),
+      sy: openJPEG.getValue(imageSizeYPtr, 'i32'),
+      nbChannels: openJPEG.getValue(imageSizeCompPtr, 'i32'), // hard coded for now
+      perf_timetodecode: undefined,
+      pixelData: undefined,
+    };
+      
+    // Copy the data from the EMSCRIPTEN heap into the correct type array
+    const length = image.sx * image.sy * image.nbChannels;
+    const src32 = new Int32Array(openJPEG.HEAP32.buffer, imagePtr, length);
+    console.log('----------------step 0')
+
+    if (bytesPerPixel === 1) {
+      if (Uint8Array.from) {
+        image.pixelData = Uint8Array.from(src32);
+      } else {
+        image.pixelData = new Uint8Array(length);
+        for (let i = 0; i < length; i++) {
+          image.pixelData[i] = src32[i];
+        }
+      }
+    } else if (signed) {
+      if (Int16Array.from) {
+        image.pixelData = Int16Array.from(src32);
+      } else {
+        image.pixelData = new Int16Array(length);
+        for (let i = 0; i < length; i++) {
+          image.pixelData[i] = src32[i];
+        }
+      }
+    } else if (Uint16Array.from) {
+      image.pixelData = Uint16Array.from(src32);
+    } else {
+      image.pixelData = new Uint16Array(length);
+      for (let i = 0; i < length; i++) {
+        image.pixelData[i] = src32[i];
+      }
+    }
+      
+    const t1 = new Date().getTime();
+    image.perf_timetodecode = t1 - t0;
+    console.log('----------------step 1')
+      
+    // free
+    openJPEG._free(dataPtr);
+    openJPEG._free(imagePtrPtr);
+    openJPEG._free(imagePtr);
+    openJPEG._free(imageSizePtr);
+    openJPEG._free(imageSizeXPtr);
+    openJPEG._free(imageSizeYPtr);
+    openJPEG._free(imageSizeCompPtr);
+    console.log('----------------step 2', image)
+    return image;
+  }
+  function decodeOpenJpeg2000(image, arrayBuffer) {
+    const pixelData = new Uint8Array(arrayBuffer);
+    const bytesPerPixel = image.getBitsAllocated() <= 8 ? 1 : 2;
+    const signed=image.getPixelRepresentation()===1;
+    const imageFrame = decodeOpenJPEG(pixelData, bytesPerPixel, signed);
+    // imageFrame.pixelData
+
+    return imageFrame;
+  }
+
+  var url = '8.dcm'
+  // var url = '035419_156990553.dcm'
+  loadDICOM(url).then((arrayBuffer) => {
+    console.log(arrayBuffer)
+    const data2 = new DataView(arrayBuffer);
+    const image = daikon.Series.parseImage(data2);
+    var windowWidth = image.getWindowWidth()
+    var windowCenter = image.getWindowCenter()
+    console.log('image', image)
+    console.log('rows(height)', image.getRows())
+    console.log('cols(width)', image.getCols())
+    console.log('getNumberOfSamplesPerPixel', image.getNumberOfSamplesPerPixel()) 
+    console.log('getPlanarConfig', image.getPlanarConfig()) 
+    console.log('getBitsAllocated', image.getBitsAllocated()) 
+    // if Bits Stored = 8:    8
+    // if Bits Stored = 12:   16
+    console.log('getBitsStored', image.getBitsStored())
+    console.log('getDataType', image.getDataType())
+    console.log('getPixelRepresentation', image.getPixelRepresentation())
+    console.log('getPixelData', image.getPixelData())
+    console.log('getPixelData value', image.getPixelData().value)
+    console.log('isCompressed', image.isCompressed())
+    console.log('isPalette', image.isPalette())
+    console.log('isCompressedJPEG2000', image.isCompressedJPEG2000())
+    console.log('getJpegs', image.getJpegs())
+    const encapTags = image.getEncapsulatedData()
+    console.log('-- encapTags --', encapTags)
+    const width = image.getCols()
+    const height = image.getRows()
+    // var decoder = new JpxImage();
+    // // decoder.parse(new Uint8Array(image.getPixelData()));
+    // decoder.parse(image.getPixelData());
+    // console.log('***',decoder)
+    // img, _, err := image.Decode(bytes.NewReader(srcData2.Data))
+    // imgBase64Str := base64.StdEncoding.EncodeToString(srcData2.Data)
+    if (encapTags) {
+      const numTags = encapTags.length
+      for (let ctr = 0; ctr < numTags; ctr += 1) {
+        console.log('--- obj --- C8 buffer:', encapTags[ctr].value)
+        if (encapTags[ctr].value) {
+          jpxData = new Uint8Array(encapTags[ctr].value.buffer);
+          const imageFrame = decodeOpenJpeg2000(image, encapTags[ctr].value.buffer)
+          const pixelData = imageFrame.pixelData
+          console.log('--- pixelData ---', pixelData)
+          var canvas = document.getElementById('myOpenJpeg');
+          var context = canvas.getContext('2d');
+          var img = context.createImageData(width, height);
+          let i = 0;
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const idx = y * width + x
+              r = pixelData[3 * idx + 0]
+              g = pixelData[3 * idx + 1]
+              b = pixelData[3 * idx + 2]
+              img.data[i+0] = r;
+              img.data[i+1] = g;
+              img.data[i+2] = b;
+              img.data[i+3] = 255;
+              i += 4
+            }
+          }
+          context.putImageData(img,0,0);
+          /* console.log('--jpxData--', jpxData)
+          var decoder = new JpxImage();
+          decoder.parse(jpxData);
+          console.log(decoder)
+          
+          function arrayBufferToBase64( buffer ) {
+            console.log("buffer ", buffer)
+            var binary = '';
+            var bytes = new Uint8Array( buffer );
+            var len = buffer.byteLength;
+            for (var i = 0; i < len; i++) {
+                binary += String.fromCharCode( bytes[ i ] );
+            }
+            return window.btoa( binary );
+          }
+          document.getElementById('app').src = 'data:image/png;base64, ' + arrayBufferToBase64(encapTags[ctr].value.buffer) */
+          // var decoder1 = new JpegImage();
+          // decoder1.parse(new Uint8Array(encapTags[ctr].value));
+          // console.log(decoder1)
+          // var decoder2 = new JpegLS();
+          // var decoded22 = decoder2.decodeJPEGLS(new Uint8Array(encapTags[ctr].value), image.getDataType() === daikon.Image.BYTE_TYPE_INTEGER);
+          // console.log(decoded22)
+
+          // var arrayBufferView = new Uint8Array(encapTags[ctr].value.buffer)
+          // var blob = new Blob([encapTags[ctr].value.buffer], { type: 'image/jpeg' })
+          // var blob = new Blob([encapTags[ctr].value.buffer])
+          // const base64data = encapTags[ctr].value.buffer.toString('base64')
+          // console.log(base64data)
+          // var urlCreator = window.URL || window.webkitURL
+          // var imageUrl = urlCreator.createObjectURL(blob)
+          // var imageUrl = urlCreator.createObjectURL(base64data)
+          // window.open(imageUrl, 'Image')
+          // var reader = new FileReader()
+          // reader.readAsDataURL(blob)
+          // reader.onloadend = function () {
+          //   var base64data = reader.result
+          //   console.log(base64data)
+          // }
+          // console.log(URL.createObjectURL(new Blob([new Uint8Array(encapTags[ctr].value.buffer)], {
+          //   type: 'image/jpeg'
+          // })))
+        }
+      }
+    }
+    // console.log('getRawData', image.getRawData())
+    // var obj = image.getInterpretedData(false, true);
+    // console.log('obj', obj)
+    // document.getElementById('app').src = 
+  })
+
+  loadDICOM(url).then((arrayBuffer) => {
+    var byteArray = new Uint8Array(arrayBuffer);
+    var dataSet = dicomParser.parseDicom(byteArray);
+    console.log('-- dicomParser --', dataSet)
+  })
+</script>
+
+</html>

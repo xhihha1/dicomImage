@@ -268,6 +268,7 @@
           var reader = new FileReader();
           reader.onloadend = function() {
               // var data = JSON.parse(this.result);
+              activeEdit.dicomFileName = fileName
               parseBufferArrayAndSetBackground(activeEdit, fileName, this.result)
           };
           reader.readAsArrayBuffer(f);
@@ -293,6 +294,7 @@
       event.preventDefault();
       event.stopPropagation();
       $('#canvasParent').click()
+      $('#btnLoadImage').click()
       dropFunc(activeEdit, event)
     });
 
@@ -310,6 +312,7 @@
       event.preventDefault();
       event.stopPropagation();
       $('#canvasParent1').click()
+      $('#btnLoadImage').click()
       dropFunc(activeEdit, event)
     });
     
@@ -327,6 +330,7 @@
       event.preventDefault();
       event.stopPropagation();
       $('#canvasParent2').click()
+      $('#btnLoadImage').click()
       dropFunc(activeEdit, event)
     });
     
@@ -344,6 +348,7 @@
       event.preventDefault();
       event.stopPropagation();
       $('#canvasParent3').click()
+      $('#btnLoadImage').click()
       dropFunc(activeEdit, event)
     });
 })()

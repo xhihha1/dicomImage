@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+  <canvas id="myCanvas" width="800" height="600" style="border:1px solid #000000;"></canvas>
+  <hr/>
+  <img id="app" />
+</body>
+<script src="jquery.min.js"></script>
+<!-- <script src="../dicomParser.min.js"></script> -->
+<script src="daikon.js"></script>
+<script src="jpx.js"></script>
+<script src="jpeg-ls.js"></script>
+<script src="jpeg-baseline.js"></script>
+<script src="charLS-DynamicMemory-browser.js"></script>
+<script>
+  function loadDICOM(fileName) {
+    return new Promise((resolve, reject) => {
+      var oReq = new XMLHttpRequest();
+      oReq.open("GET", fileName, true);
+      oReq.responseType = "arraybuffer";
+      oReq.onload = function (oEvent) {
+        var arrayBuffer = oReq.response; // Note: not oReq.responseText
+        if (arrayBuffer) {
+          // var byteArray = new Uint8Array(arrayBuffer);
+          // var dataSet = dicomParser.parseDicom(byteArray);
+          resolve(arrayBuffer)
+        }
+      };
+      oReq.send(null);
+    })
+  }
+  loadDICOM('relax.jp2').then((arrayBuffer) => {
+    jpxData = new Uint8Array(arrayBuffer);
+    var jpxImage = new JpxImage();
+    jpxImage.parse(jpxData);
+    var width = jpxImage.width;
+    var height = jpxImage.height;
+    var componentsCount = jpxImage.componentsCount;
+    var tileCount = jpxImage.tiles.length;
+    var tileComponents = jpxImage.tiles[0];
+    var pixelData = tileComponents.items;
+
+    var canvas = document.getElementById('myCanvas');
+    var context = canvas.getContext('2d');
+    var img = context.createImageData(width, height);
+    let i = 0;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x
+        r = pixelData[3 * idx + 0]
+        g = pixelData[3 * idx + 1]
+        b = pixelData[3 * idx + 2]
+        img.data[i+0] = r;
+        img.data[i+1] = g;
+        img.data[i+2] = b;
+        img.data[i+3] = 255;
+        i += 4
+      }
+    }
+    context.putImageData(img,0,0);
+  })
+  
+</script>
+
+</html>

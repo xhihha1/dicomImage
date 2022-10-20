@@ -594,7 +594,6 @@
   }
 
   function loop () {
-    // console.log('A0')
     if(typeof edit !== 'undefined') {
       const listAry = []
       for (var k in dicomFileList) {
@@ -612,15 +611,15 @@
       })
       // console.log('A1', listAry)
       for (var i = 0;listAry.length > 1 && i < listAry.length; i++) {
-        // console.log('A2', edit.dicomFileName, listAry[i].fileName)
+        console.log('B2', edit.dicomFileName, listAry[i].fileName)
         if(edit.dicomFileName === listAry[i].fileName) {
-          // console.log('A3')
-          const j = i !== listAry.length - 1 ? i + 1 : 0
+          // const j = i !== listAry.length - 1 ? i + 1 : 0
+          const j = i
           let image = listAry[j].dataSet
           var windowWidth = image.getWindowWidth()
           var windowCenter = image.getWindowCenter()
           var op = changeDicomWLD(image, windowWidth, windowCenter)
-          edit.dicomFileName = listAry[j].fileName
+          // edit.dicomFileName = listAry[j].fileName
           edit.dicomInfo = {
             ww: op.ww,
             wl: op.wl,
